@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+
+@import "tailwindcss";
+
+/* Global Styles */
+html {
+  scroll-behavior: smooth;
+  width: 100%;
+  overflow-x: clip;
+}
+
+body {
+  margin: 0;
+  width: 100%;
+  font-family: "DM Sans", sans-serif;
+  overflow-x: clip;
+}
+
+.font-serif {
+  font-family: "Playfair Display", serif;
+}
+
+/* Collection Marquee */
+.marquee-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
+.marquee-forward {
+  animation: marqueeForward 38s linear infinite;
+}
+
+.marquee-reverse {
+  animation: marqueeReverse 42s linear infinite;
+}
+
+@keyframes marqueeForward {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marqueeReverse {
+  from {
+    transform: translateX(-50%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Pause animation on hover */
+.marquee-wrapper:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .marquee-forward {
+    animation-duration: 32s;
+  }
+
+  .marquee-reverse {
+    animation-duration: 35s;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-forward,
+  .marquee-reverse {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
