@@ -27,8 +27,7 @@ import Contact from "./pages/Contact.jsx";
 import About from "./pages/About.jsx";
 import GetQuote from "./pages/GetQuote.jsx";
 import Wardrobes from "./pages/Wardrobes.jsx";
-import Kitchens from "./pages/kitchens.jsx";
-
+import Kitchens from "./pages/Kitchens.jsx";
 /* ============================================================
    ADMIN PAGES
 ============================================================ */
