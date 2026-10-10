@@ -1,4 +1,3 @@
-
 import React, {
   useEffect,
   useMemo,
@@ -38,7 +37,7 @@ const solidAssets = import.meta.glob("../assets/dor*.webp", {
   import: "default",
 });
 
-const specialtyAssets = import.meta.glob("../assets/pdor*.webp", {
+const retailAssets = import.meta.glob("../assets/pdor*.webp", {
   eager: true,
   query: "?url",
   import: "default",
@@ -57,7 +56,16 @@ const sortAssets = (assets) =>
 const entranceImages = sortAssets(entranceAssets);
 const doubleEntranceImages = sortAssets(doubleAssets);
 const solidImages = sortAssets(solidAssets);
-const specialtyImages = sortAssets(specialtyAssets).slice(0, 3);
+const localRetailImages = sortAssets(retailAssets);
+
+// Retail products use their own images, never in the entrance-door category.
+const retailImages = [
+  // pdor1.webp is the Malaysian plywood door and must appear in Retail Doors.
+  localRetailImages[0] || localRetailImages[1] || null,
+  "https://nplhmugotsnxphlrxpud.supabase.co/storage/v1/object/public/product-images/doors/existing/melamine-plywood-doors/melamine-plywood-door.webp",
+  "https://nplhmugotsnxphlrxpud.supabase.co/storage/v1/object/public/product-images/doors/existing/fiber-doors/fiber-door.webp",
+];
+
 
 /* =========================================================
    WHATSAPP
@@ -128,69 +136,68 @@ const createProducts = (images, category, prefix) =>
   });
 
 /* =========================================================
-   SPECIALTY PRODUCTS
-   pdor1.webp = Fiber Door
-   pdor2.webp = Malaysian Ply Wood Door
-   pdor3.webp = Melamine Ply Wood Door
+   RETAIL PRODUCTS
+   pdor1.webp, pdor2.webp, pdor3.webp
+   (only shown inside Retail Doors)
 ========================================================= */
 
-const specialtyDefinitions = [
-  {
-    imageIndex: 0,
-    id: "specialty-1",
-    category: "Fiber Door",
-    title: "Premium Fiber Door",
-    description:
-      "A durable and practical fiber door solution designed to resist water, moisture and termite-related damage. Suitable for modern residential and commercial applications.",
-    price: 590,
-    material: "High-performance fiber construction",
-    features: [
-      "Durable construction",
-      "Water proof",
-      "Moisture proof",
-      "Termite proof",
-    ],
-  },
-  {
-    imageIndex: 1,
-    id: "specialty-2",
-    category: "Malaysian Ply Wood Door",
-    title: "Malaysian Ply Wood Door",
-    description:
-      "A refined plywood door offering durability, clean finishing and practical performance. Available in selected sizes up to 7 feet in height.",
-    price: 480,
-    material: "Malaysian plywood",
-    features: [
-      "Premium plywood construction",
-      "Clean and refined finish",
-      "Suitable for modern interiors",
-      "Sizes available up to 7 feet in height",
-    ],
-  },
-  {
-    imageIndex: 2,
-    id: "specialty-3",
-    category: "Melamine Ply Wood Door",
-    title: "Melamine Ply Wood Door",
-    description:
-      "A contemporary, polish-free door finished with melamine for a clean appearance. Designed with semi-waterproof performance and available in sizes up to 7 feet in height.",
-    price: 340,
-    material: "Melamine-faced plywood",
-    features: [
-      "Polish-free finish",
-      "Semi-waterproof",
-      "Clean contemporary appearance",
-      "Sizes available up to 7 feet in height",
-    ],
-  },
+const retailDefinitions = [
+{
+imageIndex: 0,
+id: "retail-malaysian-plywood",
+category: "Retail Door",
+title: "Melamine Plywood Door",
+description:
+"Polish-free melamine plywood door with a clean modern finish and semi water-resistant construction. Available in sizes up to 7 feet in height.",
+price: null,
+material: "Melamine Plywood Door",
+features: [
+"Durable construction",
+"Refined finish",
+"Available in sizes up to 7 feet in height",
+],
+},
+{
+imageIndex: 1,
+id: "retail-melamine-plywood",
+category: "Retail Door",
+title: "Fiber Door",
+description:
+"Durable fiber door designed to be water proof, moisture proof and termite proof. Starting from PKR 590 per square foot.",
+price: null,
+material: "Fiber Door",
+features: [
+"Polish-free finish",
+"Clean modern finish",
+"Semi water-resistant construction",
+"Available in sizes up to 7 feet in height",
+],
+},
+{
+imageIndex: 2,
+id: "retail-fiber",
+category: "Retail Door",
+title: "Malaysian Plywood Door",
+description:
+"Malaysian plywood door with a durable construction and refined finish. Available in sizes up to 7 feet in height.",
+price: null,
+material: "Malaysian Plywood Door",
+features: [
+"Durable construction",
+"Water proof",
+"Moisture proof",
+"Termite proof",
+],
+},
 ];
 
-const specialtyProducts = specialtyDefinitions
+
+const retailProducts = retailDefinitions
   .map((item) => ({
     ...item,
-    image: specialtyImages[item.imageIndex],
-    categoryId: "specialty",
-    subcategory: "Specialty Doors",
+    image: retailImages[item.imageIndex],
+    categoryId: "retail",
+    subcategory: "Retail Doors",
     priceUnit: "sq.ft",
     delivery_text: "Delivery All Over Pakistan",
   }))
@@ -208,7 +215,7 @@ const fallbackProducts = [
     "double"
   ),
   ...createProducts(solidImages, "Solid Door", "solid"),
-  ...specialtyProducts,
+  ...retailProducts,
 ];
 
 /* =========================================================
@@ -235,10 +242,10 @@ const categories = [
     subcategory: "Solid Doors",
   },
   {
-    id: "specialty",
-    label: "Specialty Doors",
-    shortLabel: "Specialty Doors",
-    subcategory: "Specialty Doors",
+    id: "retail",
+    label: "Retail Doors",
+    shortLabel: "Retail Doors",
+    subcategory: "Retail Doors",
   },
 ];
 
@@ -329,8 +336,10 @@ export default function Doors() {
         const databaseProducts = (data || [])
           .filter((product) => product.image_url)
           .map((product) => {
-            const subcategory =
-              product.subcategory || "Entrance Doors";
+            const subcategory = product.subcategory || "";
+            const lowerSubcategory = subcategory.toLowerCase();
+            const searchableName =
+              `${product.title || ""} ${product.description || ""} ${subcategory}`.toLowerCase();
 
             let category = "Entrance Door";
             let categoryId = "entrance";
@@ -338,24 +347,44 @@ export default function Doors() {
             let priceUnit = "";
 
             if (
-              subcategory.toLowerCase().includes("specialty")
+              lowerSubcategory.includes("specialty") ||
+              lowerSubcategory.includes("retail") ||
+              searchableName.includes("malaysian plywood") ||
+              searchableName.includes("melamine plywood") ||
+              searchableName.includes("fiber door") ||
+              searchableName.includes("fibre door")
             ) {
-              category = "Specialty Door";
-              categoryId = "specialty";
-              normalizedSubcategory = "Specialty Doors";
+              category = "Retail Door";
+              categoryId = "retail";
+              normalizedSubcategory = "Retail Doors";
               priceUnit = "sq.ft";
             } else if (
-              subcategory.toLowerCase().includes("double")
+              lowerSubcategory.includes("double") ||
+              searchableName.includes("double entrance")
             ) {
               category = "Double Entrance Door";
               categoryId = "double";
               normalizedSubcategory = "Double Entrance Doors";
             } else if (
-              subcategory.toLowerCase().includes("solid")
+              lowerSubcategory.includes("solid") ||
+              lowerSubcategory.includes("interior door")
             ) {
               category = "Solid Door";
               categoryId = "solid";
               normalizedSubcategory = "Solid Doors";
+            } else if (
+              lowerSubcategory.includes("entrance") ||
+              searchableName.includes("entrance door")
+            ) {
+              category = "Entrance Door";
+              categoryId = "entrance";
+              normalizedSubcategory = "Entrance Doors";
+            } else {
+              // Unknown categories are excluded from entrance/solid grids.
+              category = "Retail Door";
+              categoryId = "retail";
+              normalizedSubcategory = "Retail Doors";
+              priceUnit = "sq.ft";
             }
 
             return {
@@ -374,13 +403,15 @@ export default function Doors() {
               material: "",
               features: [],
             };
-          });
+          })
+          // Retail Doors always come only from pdor1 - pdor3
+          .filter((product) => product.categoryId !== "retail");
 
         /*
          * Keep database products and preserve local assets for
          * categories which have no database products.
          *
-         * Specialty products always come from pdor1-pdor3.
+         * Retail products always come from pdor1-pdor3.
          */
 
         const databaseSubcategories = new Set(
@@ -389,14 +420,14 @@ export default function Doors() {
 
         const missingLocalProducts = fallbackProducts.filter(
           (product) =>
-            product.categoryId !== "specialty" &&
+            product.categoryId !== "retail" &&
             !databaseSubcategories.has(product.subcategory)
         );
 
         setProducts([
           ...databaseProducts,
           ...missingLocalProducts,
-          ...specialtyProducts,
+          ...retailProducts,
         ]);
 
         setProductsLoaded(true);
@@ -567,10 +598,10 @@ City: ${form.city}
 Please share more details, available options and final pricing.
 
 Door Construction Options:
-• Solid Door — Starting from PKR 45,000
-• Semi-Solid Door — Starting from PKR 24,000
-• Engineered Solid Door — Starting from PKR 16,000
-• Flush Door — Custom Quote
+- Solid Door — Starting from PKR 45,000
+- Semi-Solid Door — Starting from PKR 24,000
+- Engineered Solid Door — Starting from PKR 16,000
+- Flush Door — Custom Quote
 
 Prices may vary depending on size, design, wood/material selection, finish and customization.
     `.trim();
@@ -629,7 +660,7 @@ Prices may vary depending on size, design, wood/material selection, finish and c
 
             <p className="mx-auto mt-6 max-w-2xl text-sm leading-7 text-white/70 sm:text-base sm:leading-8">
               Discover a refined collection of entrance, double entrance,
-              solid and specialty doors, thoughtfully designed to bring
+              solid and retail doors, thoughtfully designed to bring
               character, craftsmanship and timeless elegance to your space.
             </p>
 
@@ -850,9 +881,9 @@ Prices may vary depending on size, design, wood/material selection, finish and c
             </div>
           )}
 
-          {/* SPECIALTY NOTE */}
+          {/* RETAIL NOTE */}
 
-          {activeCategory === "specialty" && (
+          {activeCategory === "retail" && (
             <div className="mt-7 rounded-2xl border border-[#D9C7C0] bg-[#4A151F] px-5 py-5 text-center sm:px-7">
               <p className="font-serif text-lg font-medium text-white sm:text-xl">
                 More Designs Available
@@ -1162,9 +1193,9 @@ Prices may vary depending on size, design, wood/material selection, finish and c
                   </div>
                 </div>
 
-                {/* SPECIALTY NOTE */}
+                {/* RETAIL NOTE */}
 
-                {selectedProduct.categoryId === "specialty" && (
+                {selectedProduct.categoryId === "retail" && (
                   <div className="mt-5 rounded-xl border border-[#D9C7C0] bg-[#EFE5DE] px-4 py-3.5">
                     <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#7B4B54]">
                       Collection Note

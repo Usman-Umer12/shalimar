@@ -114,11 +114,36 @@ const SLIDER_LABELS = {
 
 const BASE_D = 24;
 const WALL_D = 12;
-const BASE_H = 34.5;
 const PLINTH = 4;
-const WALL_Y0 = 54;
-const WALL_H = 30;
 const MODULE = 24;
+
+/* ---- HEIGHT SETTINGS (inches) ---- */
+
+// Below counter (base cabinets + counter): 2 ft to 3 ft
+const BASE_H_MIN = 24;
+const BASE_H_MAX = 36;
+const BASE_H_DEFAULT = 35;
+
+// Above back splash tile (wall cabinets): 2 ft to 6 ft
+const WALL_H_MIN = 24;
+const WALL_H_MAX = 72;
+const WALL_H_DEFAULT = 30;
+
+// Gap between counter and wall cabinets (back splash tile area)
+const SPLASH_GAP = 19.5;
+
+// Total kitchen height can never go above 8 ft
+const MAX_TOTAL_H = 96;
+
+// Highest wall cabinet height allowed for a given base height
+const wallMaxFor = (baseH) =>
+  Math.max(
+    WALL_H_MIN,
+    Math.min(WALL_H_MAX, MAX_TOTAL_H - (baseH + SPLASH_GAP))
+  );
+
+const totalHeight = (p) =>
+  p.wall ? p.baseH + SPLASH_GAP + p.wallH : p.baseH;
 
 /* ==========================================================================
    HELPERS
@@ -147,6 +172,14 @@ const toDisp = (inch, unit) =>
     ? `${Number(inch.toFixed(1))} in`
     : `${Math.round(inch * 2.54)} cm`;
 
+// Height shown as feet + inches (e.g. 6' 0")
+const toFeet = (inch) => {
+  const ft = Math.floor(inch / 12);
+  const rem = Math.round(inch - ft * 12);
+
+  return rem === 0 ? `${ft}'` : `${ft}' ${rem}"`;
+};
+
 const unitCount = (len) => Math.max(1, Math.round(len / MODULE));
 
 function getRuns(layout, p) {
@@ -169,7 +202,7 @@ function calcPrice(type, p) {
   const baseLen = runs.reduce((a, r) => a + r.base, 0);
   const wallLen = p.wall ? runs.reduce((a, r) => a + r.wall, 0) : 0;
 
-  const area = (baseLen * BASE_H + wallLen * WALL_H) / 144;
+  const area = (baseLen * p.baseH + wallLen * p.wallH) / 144;
 
   const baseUnits = runs.reduce((a, r) => a + unitCount(r.base), 0);
   const wallUnits = p.wall
@@ -338,7 +371,7 @@ function frontPiece(add, m, type, cx, y, w, h, zFront, s, g) {
    BASE CABINETS
 ============================================================================= */
 
-function buildBase(g, len, type, m, s) {
+function buildBase(g, len, type, m, s, baseH) {
   const add = makeAdd(g, s);
 
   const n = unitCount(len);
@@ -346,11 +379,11 @@ function buildBase(g, len, type, m, s) {
   const gap = 0.12;
   const D = BASE_D;
 
-  const carcH = BASE_H - 1.5 - PLINTH;
+  const carcH = baseH - 1.5 - PLINTH;
 
   add(len - 1, PLINTH, D - 2, len / 2, 0, D / 2 - 1, m.dark);
   add(len, carcH, D - 0.75, len / 2, PLINTH, (D - 0.75) / 2, m.body);
-  add(len, 1.5, D, len / 2, BASE_H - 1.5, D / 2, m.counter);
+  add(len, 1.5, D, len / 2, baseH - 1.5, D / 2, m.counter);
 
   for (let i = 0; i < n; i++) {
     const cx = i * uw + uw / 2;
@@ -402,7 +435,7 @@ function buildBase(g, len, type, m, s) {
    WALL CABINETS
 ============================================================================= */
 
-function buildWall(g, len, type, m, s, glassCount) {
+function buildWall(g, len, type, m, s, glassCount, wallH, wallY0) {
   const add = makeAdd(g, s);
 
   const n = unitCount(len);
@@ -410,7 +443,7 @@ function buildWall(g, len, type, m, s, glassCount) {
   const gap = 0.12;
   const D = WALL_D;
 
-  add(len, WALL_H, D - 0.75, len / 2, WALL_Y0, (D - 0.75) / 2, m.body);
+  add(len, wallH, D - 0.75, len / 2, wallY0, (D - 0.75) / 2, m.body);
 
   const glassSet = new Set();
 
@@ -431,8 +464,8 @@ function buildWall(g, len, type, m, s, glassCount) {
   for (let i = 0; i < n; i++) {
     const cx = i * uw + uw / 2;
     const w = uw - gap * 2;
-    const y = WALL_Y0 + gap / 2;
-    const h = WALL_H - gap;
+    const y = wallY0 + gap / 2;
+    const h = wallH - gap;
 
     if (glassSet.has(i)) {
       const fw = 1.4;
@@ -471,6 +504,8 @@ function buildKitchen(group, type, p) {
 
   const glassCount = TYPES[type].glass ? 2 : 0;
 
+  const wallY0 = p.baseH + SPLASH_GAP;
+
   const place = (g, kind, isWall) => {
     if (kind === "A") {
       g.position.set(0, 0, 0);
@@ -493,13 +528,22 @@ function buildKitchen(group, type, p) {
   runs.forEach((r) => {
     const base = new THREE.Group();
 
-    buildBase(base, r.base, type, m, s);
+    buildBase(base, r.base, type, m, s, p.baseH);
     place(base, r.kind, false);
 
     if (p.wall) {
       const wall = new THREE.Group();
 
-      buildWall(wall, r.wall, type, m, s, r.kind === "A" ? glassCount : 0);
+      buildWall(
+        wall,
+        r.wall,
+        type,
+        m,
+        s,
+        r.kind === "A" ? glassCount : 0,
+        p.wallH,
+        wallY0
+      );
       place(wall, r.kind, true);
     }
   });
@@ -637,7 +681,9 @@ function Viewer({ type, params, apiRef }) {
 
     const s = 0.1;
     const { W, Z } = extents(p);
-    const H = 84;
+
+    // Frame the full possible height (up to 8 ft) so tall kitchens fit.
+    const H = Math.max(84, totalHeight(p));
 
     const r = Math.max(W, Z, H) * s * 1.75 + 4;
 
@@ -1333,6 +1379,8 @@ export default function Kitchens() {
     b: 96,
     c: 96,
     wall: true,
+    baseH: BASE_H_DEFAULT,
+    wallH: WALL_H_DEFAULT,
   });
 
   const [showNotice, setShowNotice] = useState(true);
@@ -1341,6 +1389,32 @@ export default function Kitchens() {
 
   const closeOrder = useCallback(() => setShowOrder(false), []);
   const closeProduct = useCallback(() => setSelectedProduct(null), []);
+
+  // Height sliders (keeps total height within 8 ft)
+  const wallMax = wallMaxFor(params.baseH);
+
+  const setBaseH = (value) => {
+    setParams((prev) => {
+      const baseH = Math.min(BASE_H_MAX, Math.max(BASE_H_MIN, value));
+      const maxWall = wallMaxFor(baseH);
+
+      return {
+        ...prev,
+        baseH,
+        wallH: Math.min(prev.wallH, maxWall),
+      };
+    });
+  };
+
+  const setWallH = (value) => {
+    setParams((prev) => ({
+      ...prev,
+      wallH: Math.min(
+        wallMaxFor(prev.baseH),
+        Math.max(WALL_H_MIN, value)
+      ),
+    }));
+  };
 
   /* ======================================================================
      SUPABASE PRODUCTS
@@ -1507,7 +1581,23 @@ export default function Kitchens() {
       ...Object.entries(labels).map(
         ([k, l]) => `${l}: ${toDisp(params[k], unit)}`
       ),
+      `Height below counter: ${toFeet(params.baseH)} (${toDisp(
+        params.baseH,
+        unit
+      )})`,
       `Wall cabinets: ${params.wall ? "Yes" : "No"}`,
+      ...(params.wall
+        ? [
+            `Height above back splash: ${toFeet(params.wallH)} (${toDisp(
+              params.wallH,
+              unit
+            )})`,
+          ]
+        : []),
+      `Total height: ${toFeet(totalHeight(params))} (${toDisp(
+        totalHeight(params),
+        unit
+      )})`,
       `Total area: ${area.toFixed(1)} sq ft`,
       `Rate: ${fmtPKR(PRICING.rate[type])} / sq ft`,
       `Estimated price: ${fmtPKR(total)}`,
@@ -1719,6 +1809,89 @@ export default function Kitchens() {
                   className="h-5 w-5 cursor-pointer accent-[#5b1f2c]"
                 />
               </label>
+            </div>
+
+            {/* Height */}
+
+            <div className="space-y-4 border-t border-neutral-200 py-5">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold">Height</div>
+
+                <div className="text-xs text-neutral-500">
+                  Total:{" "}
+                  <b className="text-neutral-800">
+                    {toFeet(totalHeight(params))}
+                  </b>{" "}
+                  (max 8')
+                </div>
+              </div>
+
+              {/* Below counter */}
+
+              <div className="grid grid-cols-[84px_1fr_76px] items-center gap-3">
+                <label htmlFor="baseH" className="text-sm font-medium leading-tight">
+                  Below counter
+                </label>
+
+                <input
+                  id="baseH"
+                  type="range"
+                  min={BASE_H_MIN}
+                  max={BASE_H_MAX}
+                  step={1}
+                  value={params.baseH}
+                  onChange={(e) => setBaseH(Number(e.target.value))}
+                  className="h-1.5 w-full cursor-pointer accent-[#5b1f2c]"
+                />
+
+                <span className="rounded-lg border border-neutral-200 px-2 py-1.5 text-center text-sm">
+                  {unit === "in" ? toFeet(params.baseH) : toDisp(params.baseH, unit)}
+                </span>
+              </div>
+
+              <div className="-mt-2 flex justify-between pl-[96px] pr-[88px] text-[10px] text-neutral-400">
+                <span>2'</span>
+                <span>3'</span>
+              </div>
+
+              {/* Above back splash */}
+
+              {params.wall && (
+                <>
+                  <div className="grid grid-cols-[84px_1fr_76px] items-center gap-3">
+                    <label htmlFor="wallH" className="text-sm font-medium leading-tight">
+                      Above back splash
+                    </label>
+
+                    <input
+                      id="wallH"
+                      type="range"
+                      min={WALL_H_MIN}
+                      max={wallMax}
+                      step={1}
+                      value={Math.min(params.wallH, wallMax)}
+                      onChange={(e) => setWallH(Number(e.target.value))}
+                      className="h-1.5 w-full cursor-pointer accent-[#5b1f2c]"
+                    />
+
+                    <span className="rounded-lg border border-neutral-200 px-2 py-1.5 text-center text-sm">
+                      {unit === "in"
+                        ? toFeet(params.wallH)
+                        : toDisp(params.wallH, unit)}
+                    </span>
+                  </div>
+
+                  <div className="-mt-2 flex justify-between pl-[96px] pr-[88px] text-[10px] text-neutral-400">
+                    <span>2'</span>
+                    <span>{toFeet(wallMax)}</span>
+                  </div>
+                </>
+              )}
+
+              <p className="text-[11px] leading-relaxed text-neutral-400">
+                Total kitchen height is limited to 8 ft, so the upper limit
+                of the wall cabinet height adjusts automatically.
+              </p>
             </div>
 
             {/* Price */}
