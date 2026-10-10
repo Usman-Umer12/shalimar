@@ -615,6 +615,9 @@ Please share more details.
                         <option value="Doors">
                           Doors
                         </option>
+                        <option value="complete">
+                          Complete Project
+                        </option>
                       </select>
 
                       {/* Custom Arrow */}

@@ -132,15 +132,8 @@ const WALL_H_DEFAULT = 30;
 // Gap between counter and wall cabinets (back splash tile area)
 const SPLASH_GAP = 19.5;
 
-// Total kitchen height can never go above 8 ft
-const MAX_TOTAL_H = 96;
-
-// Highest wall cabinet height allowed for a given base height
-const wallMaxFor = (baseH) =>
-  Math.max(
-    WALL_H_MIN,
-    Math.min(WALL_H_MAX, MAX_TOTAL_H - (baseH + SPLASH_GAP))
-  );
+// Highest wall cabinet height allowed (above back splash): 6 ft
+const wallMaxFor = () => WALL_H_MAX;
 
 const totalHeight = (p) =>
   p.wall ? p.baseH + SPLASH_GAP + p.wallH : p.baseH;
@@ -682,7 +675,7 @@ function Viewer({ type, params, apiRef }) {
     const s = 0.1;
     const { W, Z } = extents(p);
 
-    // Frame the full possible height (up to 8 ft) so tall kitchens fit.
+    // Frame the full possible height so tall kitchens fit.
     const H = Math.max(84, totalHeight(p));
 
     const r = Math.max(W, Z, H) * s * 1.75 + 4;
@@ -1390,18 +1383,16 @@ export default function Kitchens() {
   const closeOrder = useCallback(() => setShowOrder(false), []);
   const closeProduct = useCallback(() => setSelectedProduct(null), []);
 
-  // Height sliders (keeps total height within 8 ft)
-  const wallMax = wallMaxFor(params.baseH);
+  // Height sliders
+  const wallMax = wallMaxFor();
 
   const setBaseH = (value) => {
     setParams((prev) => {
       const baseH = Math.min(BASE_H_MAX, Math.max(BASE_H_MIN, value));
-      const maxWall = wallMaxFor(baseH);
 
       return {
         ...prev,
         baseH,
-        wallH: Math.min(prev.wallH, maxWall),
       };
     });
   };
@@ -1409,10 +1400,7 @@ export default function Kitchens() {
   const setWallH = (value) => {
     setParams((prev) => ({
       ...prev,
-      wallH: Math.min(
-        wallMaxFor(prev.baseH),
-        Math.max(WALL_H_MIN, value)
-      ),
+      wallH: Math.min(wallMaxFor(), Math.max(WALL_H_MIN, value)),
     }));
   };
 
@@ -1821,8 +1809,7 @@ export default function Kitchens() {
                   Total:{" "}
                   <b className="text-neutral-800">
                     {toFeet(totalHeight(params))}
-                  </b>{" "}
-                  (max 8')
+                  </b>
                 </div>
               </div>
 
@@ -1887,11 +1874,6 @@ export default function Kitchens() {
                   </div>
                 </>
               )}
-
-              <p className="text-[11px] leading-relaxed text-neutral-400">
-                Total kitchen height is limited to 8 ft, so the upper limit
-                of the wall cabinet height adjusts automatically.
-              </p>
             </div>
 
             {/* Price */}

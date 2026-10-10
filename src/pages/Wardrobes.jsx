@@ -27,9 +27,9 @@ const BRAND = "Shalimar";
 
 const PRICING = {
   rate: {
-    matte: 2800,
-    glossy: 3200,
-    aluminium: 3600,
+    matte: 1700,
+    glossy: 1950,
+    aluminium: 2400,
   },
 };
 
