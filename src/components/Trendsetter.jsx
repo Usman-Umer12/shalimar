@@ -1,6 +1,6 @@
 import React from "react";
 import { ArrowUpRight } from "lucide-react";
-import des3 from "../assets/des3.webp";
+import des3 from "../assets/gate.webp";
 
 const Trendsetter = () => {
   return (
